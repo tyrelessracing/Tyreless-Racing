@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High Precision Clock (Local)</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Minimalistic black background and centered layout */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #000000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            flex-direction: column;
+        }
+        /* Style for the highly precise time display */
+        #time-display {
+            font-family: 'Courier New', monospace; /* Monospace font for aligned digits */
+            font-weight: 700;
+            font-size: clamp(1rem, 4vw, 3rem); /* Responsive font sizing */
+            color: #f3f4f6; /* Light gray text */
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
+            line-height: 1.5;
+            padding: 1rem;
+        }
+        /* Highlight the fractional seconds */
+        #fractional-seconds {
+            color: #34d399; /* Teal highlight */
+        }
+        /* Style for the Timezone abbreviation */
+        .timezone-abbr {
+            font-size: 0.7em;
+            font-weight: 400;
+            color: #6b7280;
+            margin-left: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Time Display Area: Now includes Date, Time, and Timezone -->
+    <div id="time-display" class="text-white break-all text-center">
+        <!-- Content will be injected by JavaScript -->
+        Loading...
+    </div>
+
+    <script>
+        // Set up the initial synchronization point
+        let initialWallTime = Date.now();
+        let initialPerformanceTime = performance.now();
+        
+        const timeDisplayElement = document.getElementById('time-display');
+        
+        // Create span elements for dynamic updating and styling
+        const fractionalSecondsElement = document.createElement('span');
+        fractionalSecondsElement.id = 'fractional-seconds';
+        
+        const timezoneElement = document.createElement('span');
+        timezoneElement.className = 'timezone-abbr';
+
+
+        // --- Core Time Calculation Function ---
+        function updateClock() {
+            // Calculate elapsed time since initialization using high-resolution timer
+            const currentPerformanceTime = performance.now();
+            const elapsedMillis = currentPerformanceTime - initialPerformanceTime;
+            
+            // Determine the precise total time in milliseconds
+            const preciseTimeMillis = initialWallTime + elapsedMillis;
+
+            // --- Separate into whole seconds and fractional part ---
+            const totalSeconds = preciseTimeMillis / 1000;
+            const wholeSeconds = Math.floor(totalSeconds);
+
+            // Create a Date object from whole seconds (used for date/time components)
+            const date = new Date(wholeSeconds * 1000); 
+
+            // Calculate the fractional part to 10 decimal places.
+            // toFixed(10) ensures we have exactly 10 digits after the decimal point.
+            // .substring(2) removes the leading "0."
+            let fractionalSeconds = (totalSeconds - wholeSeconds).toFixed(10).substring(2);
+
+            // --- Format Local Date, Time, and Timezone ---
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            
+            const month = String(date.getMonth() + 1).padStart(2, '0'); // 0-indexed month
+            const day = String(date.getDate()).padStart(2, '0');
+            const year = date.getFullYear();
+
+            // Get Timezone Abbreviation (hacky but effective for simple abbr)
+            // Uses en-us locale to force time zone abbreviation output.
+            let timeZoneAbbreviation = '';
+            try {
+                 const timeZoneString = date.toLocaleTimeString('en-us', { timeZoneName: 'short' });
+                 // Attempt to extract the last non-numeric word/abbreviation
+                 const parts = timeZoneString.split(' ');
+                 timeZoneAbbreviation = parts.length > 1 ? parts[parts.length - 1] : '';
+            } catch (e) {
+                 // Fallback if toLocaleTimeString fails
+                 timeZoneAbbreviation = 'Local Time';
+            }
+            
+            // Minimalistic format: YYYY-MM-DD HH:MM:SS.frac
+            const datePart = `${year}-${month}-${day}`;
+            const wholeTime = `${hours}:${minutes}:${seconds}.`;
+            
+            // --- Update the DOM ---
+            // Clear content and reconstruct for reliable updates
+            timeDisplayElement.textContent = '';
+            
+            // Append Date and Whole Time
+            timeDisplayElement.innerHTML = `<span class="text-base text-gray-400 font-normal">${datePart}</span><br>${wholeTime}`;
+            
+            // Append Fractional Seconds
+            fractionalSecondsElement.textContent = fractionalSeconds;
+            timeDisplayElement.appendChild(fractionalSecondsElement);
+            
+            // Append Timezone Abbreviation
+            timezoneElement.textContent = timeZoneAbbreviation;
+            timeDisplayElement.appendChild(timezoneElement);
+
+
+            // Request the browser to call updateClock again before the next repaint
+            requestAnimationFrame(updateClock);
+        }
+
+        // Add a safety check for performance API
+        if (typeof performance === 'undefined' || typeof performance.now !== 'function') {
+            timeDisplayElement.textContent = "High resolution timing not supported.";
+        } else {
+            // Start the clock loop
+            requestAnimationFrame(updateClock);
+        }
+
+    </script>
+</body>
+</html>
