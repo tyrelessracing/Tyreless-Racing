@@ -3,22 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reaction Time Test</title>
+    <title>Reaction Speed Test</title>
     <style>
-        /* --- Global Styles --- */
+        /* --- Global Styles & Layout --- */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             text-align: center;
             background-color: #121212;
             color: #e0e0e0;
             padding: 40px 20px;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        /* Flex container for the main game area and the leaderboard */
+        #main-container {
+            display: flex;
+            justify-content: center;
+            gap: 50px; /* Space between game and leaderboard */
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        #game-and-controls {
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 100vh;
-            margin: 0;
+            width: 450px; /* Fixed width for game area */
         }
-
+        
         h1 {
             font-size: 2.5em;
             color: #ffffff;
@@ -126,7 +140,7 @@
             letter-spacing: 1px;
             font-weight: 600;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            margin-bottom: 30px; /* Space before leaderboard */
+            margin-bottom: 30px;
         }
 
         button:disabled {
@@ -142,18 +156,18 @@
         
         /* --- Leaderboard Styles --- */
         #leaderboard-container {
-            width: 100%;
-            max-width: 400px;
-            margin-top: 20px;
+            width: 350px; /* Fixed width for cleaner look */
+            height: fit-content;
             padding: 15px;
             background: #1e1e1e;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            margin-top: 55px; /* Align with traffic lights height + margin */
         }
         
         #leaderboard-container h2 {
             font-size: 1.5em;
-            color: #ffd700; /* Gold/Yellow for prominence */
+            color: #ffd700;
             margin-bottom: 15px;
             font-weight: 400;
         }
@@ -169,58 +183,75 @@
             justify-content: space-between;
             padding: 8px 10px;
             border-bottom: 1px solid #333;
-            font-size: 1.1em;
+            font-size: 1.0em;
         }
         
         #leaderboard li:last-child {
             border-bottom: none;
         }
         
-        #leaderboard li:nth-child(1) {
-            font-weight: 700;
-            color: #ffd700; /* Gold */
-        }
-        #leaderboard li:nth-child(2) { color: #c0c0c0; /* Silver */ }
-        #leaderboard li:nth-child(3) { color: #cd7f32; /* Bronze */ }
+        #leaderboard li:nth-child(1) { font-weight: 700; color: #ffd700; }
+        #leaderboard li:nth-child(2) { color: #c0c0c0; }
+        #leaderboard li:nth-child(3) { color: #cd7f32; }
         
         .rank-time {
             font-weight: 600;
         }
+
+        /* Mobile Adjustments (optional but good practice) */
+        @media (max-width: 800px) {
+            #main-container {
+                flex-direction: column;
+                align-items: center;
+                gap: 30px;
+            }
+            #leaderboard-container {
+                width: 100%;
+                max-width: 400px;
+                margin-top: 0;
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>Reaction Time Test</h1>
+    <h1>Reaction Speed Test</h1>
     
-    <div id="traffic-lights">
-        <div class="light" id="light-1"></div>
-        <div class="light" id="light-2"></div>
-        <div class="light" id="light-3"></div>
-        <div class="light" id="light-4"></div>
-        <div class="light" id="light-5"></div>
-    </div>
+    <div id="main-container">
+        
+        <div id="game-and-controls">
+            
+            <div id="traffic-lights">
+                <div class="light" id="light-1"></div>
+                <div class="light" id="light-2"></div>
+                <div class="light" id="light-3"></div>
+                <div class="light" id="light-4"></div>
+                <div class="light" id="light-5"></div>
+            </div>
 
-    <div id="game-area">
-        <p>Click or press SPACEBAR</p>
-        <p>to begin the test.</p>
-    </div>
+            <div id="game-area">
+                <p>Click or press **SPACEBAR**</p>
+                <p>to begin the test.</p>
+            </div>
 
-    <div id="result">
-        <div class="stat-group">
-            <span>Current Time</span>
-            <span id="time-display">--</span>
+            <div id="result">
+                <div class="stat-group">
+                    <span>Current Time</span>
+                    <span id="time-display">--</span>
+                </div>
+                <div class="stat-group">
+                    <span>Best Time</span>
+                    <span id="best-time">--</span>
+                </div>
+            </div>
+
+            <button id="start-button">Start Test</button>
         </div>
-        <div class="stat-group">
-            <span>Best Time</span>
-            <span id="best-time">--</span>
+        
+        <div id="leaderboard-container">
+            <h2>Top 10 Leaderboard</h2>
+            <ul id="leaderboard">
+                </ul>
         </div>
-    </div>
-
-    <button id="start-button">Start Test</button>
-    
-    <div id="leaderboard-container">
-        <h2>Top 5 Leaderboard</h2>
-        <ul id="leaderboard">
-            </ul>
     </div>
 
     <script>
@@ -239,43 +270,61 @@
             let isClickable = false;
             let currentLight = 0; 
             
-            // Leaderboard and Best Time management
+            // Leaderboard management
             const LEADERBOARD_KEY = 'reactionLeaderboard';
+            const MAX_SCORES = 10;
             let leaderboard = JSON.parse(localStorage.getItem(LEADERBOARD_KEY) || '[]');
-            let bestTime = leaderboard.length > 0 ? leaderboard[0].time.toString() : '--'; 
-
-            bestTimeDisplay.textContent = bestTime !== '--' ? `${bestTime} ms` : '--';
+            
+            // Initialize best time display
+            function updateBestTimeDisplay() {
+                 // Sort and trim the leaderboard before showing the best time
+                leaderboard.sort((a, b) => a.time - b.time); 
+                leaderboard = leaderboard.slice(0, MAX_SCORES);
+                bestTimeDisplay.textContent = leaderboard.length > 0 ? `${leaderboard[0].time} ms` : '--';
+            }
 
             /* --- Leaderboard Functions --- */
             function updateLeaderboardDisplay() {
-                leaderboard.sort((a, b) => a.time - b.time); // Sort by fastest time
-                leaderboard = leaderboard.slice(0, 5); // Keep only top 5
-
+                updateBestTimeDisplay();
                 localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(leaderboard));
                 
                 leaderboardList.innerHTML = ''; // Clear existing list
 
                 if (leaderboard.length === 0) {
                     leaderboardList.innerHTML = '<li>No scores yet! Be the first.</li>';
-                    bestTimeDisplay.textContent = '--';
                 } else {
                     leaderboard.forEach((score, index) => {
                         const li = document.createElement('li');
                         li.innerHTML = `<span>${index + 1}. ${score.name}</span><span class="rank-time">${score.time} ms</span>`;
                         leaderboardList.appendChild(li);
                     });
-                    // Update Best Time display from the new rank 1
-                    bestTimeDisplay.textContent = `${leaderboard[0].time} ms`;
                 }
             }
             
             function addScoreToLeaderboard(time) {
-                let name = prompt(`New record time: ${time} ms! Enter your name for the leaderboard:`, "Player");
+                // Check if user already exists
+                let name = prompt(`Time: ${time} ms! Enter your name for the leaderboard:`, "Player");
                 if (!name || name.trim() === "") {
                     name = "Anonymous";
                 }
+                name = name.substring(0, 15); // Limit name length
+
+                let existingIndex = leaderboard.findIndex(score => score.name === name);
+
+                if (existingIndex !== -1) {
+                    // Person exists: Check if new score is better
+                    if (time < leaderboard[existingIndex].time) {
+                        leaderboard[existingIndex].time = time;
+                    } else {
+                        // Not a better score, no update
+                        alert(`You didn't beat your best time of ${leaderboard[existingIndex].time} ms!`);
+                        return;
+                    }
+                } else {
+                    // New person: Add score
+                    leaderboard.push({ name: name, time: time });
+                }
                 
-                leaderboard.push({ name: name.substring(0, 15), time: time }); // Limit name length
                 updateLeaderboardDisplay();
             }
 
@@ -337,13 +386,7 @@
                     const reactionTime = endTime - startTime;
                     timeDisplay.textContent = `${reactionTime} ms`;
                     
-                    // Check if score qualifies for the leaderboard
-                    const worstScore = leaderboard.length < 5 ? Infinity : leaderboard[4].time;
-                    if (reactionTime < worstScore) {
-                        addScoreToLeaderboard(reactionTime);
-                    } else if (leaderboard.length < 5) {
-                        addScoreToLeaderboard(reactionTime);
-                    }
+                    addScoreToLeaderboard(reactionTime);
 
                     // Reset for the next round
                     gameArea.classList.remove('clickable');
@@ -398,9 +441,9 @@
                     }
                 }
             });
-            
+
             // --- Initialization ---
-            updateLeaderboardDisplay(); // Load and display the leaderboard on startup
+            updateLeaderboardDisplay(); 
             gameArea.innerHTML = initialGameAreaText;
             resetLights();
         });
