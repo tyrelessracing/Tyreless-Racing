@@ -20,7 +20,7 @@
         #main-container {
             display: flex;
             justify-content: center;
-            gap: 50px; /* Space between game and leaderboard */
+            gap: 50px;
             width: 100%;
             max-width: 1100px;
             margin: 0 auto;
@@ -30,7 +30,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            width: 450px; /* Fixed width for game area */
+            width: 450px;
         }
         
         h1 {
@@ -156,13 +156,13 @@
         
         /* --- Leaderboard Styles --- */
         #leaderboard-container {
-            width: 350px; /* Fixed width for cleaner look */
+            width: 350px;
             height: fit-content;
             padding: 15px;
             background: #1e1e1e;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-            margin-top: 55px; /* Align with traffic lights height + margin */
+            margin-top: 55px;
         }
         
         #leaderboard-container h2 {
@@ -231,6 +231,7 @@
             <div id="game-area">
                 <p>Click or press **SPACEBAR**</p>
                 <p>to begin the test.</p>
+                <p style="font-size: 0.7em; color: #777; margin-top: 15px;">Press **Ctrl+R** to reset data.</p>
             </div>
 
             <div id="result">
@@ -275,20 +276,27 @@
             const MAX_SCORES = 10;
             let leaderboard = JSON.parse(localStorage.getItem(LEADERBOARD_KEY) || '[]');
             
-            // Initialize best time display
+            // Initialization
+            updateLeaderboardDisplay(); 
+            gameArea.innerHTML = initialGameAreaText;
+            resetLights();
+
+
+            /* --- Leaderboard Functions --- */
+
+            // Sort and trim the leaderboard, then update the best time display
             function updateBestTimeDisplay() {
-                 // Sort and trim the leaderboard before showing the best time
                 leaderboard.sort((a, b) => a.time - b.time); 
                 leaderboard = leaderboard.slice(0, MAX_SCORES);
                 bestTimeDisplay.textContent = leaderboard.length > 0 ? `${leaderboard[0].time} ms` : '--';
             }
 
-            /* --- Leaderboard Functions --- */
+            // Updates localStorage and the on-screen list
             function updateLeaderboardDisplay() {
                 updateBestTimeDisplay();
                 localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(leaderboard));
                 
-                leaderboardList.innerHTML = ''; // Clear existing list
+                leaderboardList.innerHTML = ''; 
 
                 if (leaderboard.length === 0) {
                     leaderboardList.innerHTML = '<li>No scores yet! Be the first.</li>';
@@ -301,27 +309,24 @@
                 }
             }
             
+            // Adds or updates a score for a user
             function addScoreToLeaderboard(time) {
-                // Check if user already exists
                 let name = prompt(`Time: ${time} ms! Enter your name for the leaderboard:`, "Player");
                 if (!name || name.trim() === "") {
                     name = "Anonymous";
                 }
-                name = name.substring(0, 15); // Limit name length
+                name = name.substring(0, 15);
 
                 let existingIndex = leaderboard.findIndex(score => score.name === name);
 
                 if (existingIndex !== -1) {
-                    // Person exists: Check if new score is better
                     if (time < leaderboard[existingIndex].time) {
                         leaderboard[existingIndex].time = time;
                     } else {
-                        // Not a better score, no update
                         alert(`You didn't beat your best time of ${leaderboard[existingIndex].time} ms!`);
                         return;
                     }
                 } else {
-                    // New person: Add score
                     leaderboard.push({ name: name, time: time });
                 }
                 
@@ -350,6 +355,9 @@
             }
 
             function startLightSequence() {
+                // Ensure the game is in the correct state before starting
+                if (isClickable || isWaiting) return; 
+
                 resetGame();
                 currentLight = 0;
                 let lightOnDelay = 700;
@@ -381,14 +389,12 @@
 
             function handleUserAction() {
                 if (isClickable) {
-                    // Success: Calculate and display reaction time
                     const endTime = new Date().getTime();
                     const reactionTime = endTime - startTime;
                     timeDisplay.textContent = `${reactionTime} ms`;
                     
                     addScoreToLeaderboard(reactionTime);
 
-                    // Reset for the next round
                     gameArea.classList.remove('clickable');
                     gameArea.classList.add('waiting');
                     gameArea.innerHTML = "<p>Time: " + reactionTime + " ms</p><p>Ready for next round.</p>";
@@ -411,24 +417,42 @@
                     startButton.disabled = false;
                     startButton.textContent = 'Start Test';
                     
-                    // Briefly show red, then revert
                     setTimeout(() => {
                         gameArea.classList.remove('too-soon');
                         gameArea.innerHTML = initialGameAreaText;
                     }, 1500);
                 }
             }
+            
+            // --- Core Reset Function ---
+            function hardResetData() {
+                const confirmReset = confirm("Are you sure you want to reset ALL leaderboard data? This cannot be undone.");
+                if (confirmReset) {
+                    localStorage.removeItem(LEADERBOARD_KEY);
+                    leaderboard = []; // Clear current session data
+                    updateLeaderboardDisplay(); // Update the screen
+                    alert("Leaderboard data has been successfully reset!");
+                    
+                    // Reset game state to initial to prevent issues
+                    clearTimeout(timeoutId);
+                    isWaiting = false;
+                    isClickable = false;
+                    startButton.disabled = false;
+                    startButton.textContent = 'Start Test';
+                    gameArea.classList.remove('clickable', 'too-soon', 'waiting');
+                    gameArea.innerHTML = initialGameAreaText;
+                }
+            }
+            // ---------------------------
 
             // --- Event Listeners ---
             
             startButton.addEventListener('click', startLightSequence);
-            
             gameArea.addEventListener('mousedown', (event) => {
-                if (event.button === 0) {
-                     handleUserAction();
-                }
+                if (event.button === 0) { handleUserAction(); }
             }); 
             
+            // Spacebar handler
             document.addEventListener('keydown', (event) => {
                 if (event.code === 'Space') {
                     event.preventDefault(); 
@@ -441,11 +465,15 @@
                     }
                 }
             });
-
-            // --- Initialization ---
-            updateLeaderboardDisplay(); 
-            gameArea.innerHTML = initialGameAreaText;
-            resetLights();
+            
+            // Ctrl + R / Cmd + R handler
+            document.addEventListener('keydown', (event) => {
+                // Check for Ctrl (Windows/Linux) or Meta (Cmd/Mac) key AND the 'r' key
+                if ((event.ctrlKey || event.metaKey) && event.code === 'KeyR') {
+                    event.preventDefault(); // Stop the browser's default reload
+                    hardResetData();
+                }
+            });
         });
     </script>
 </body>
