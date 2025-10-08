@@ -3,93 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reaction Time Test</title>
+    <title>F1 Reaction Time Test</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Racing+Sans+One&display=swap'); /* A racing-themed font */
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Racing Sans One', Impact, sans-serif;
             text-align: center;
-            background-color: #f4f4f9;
+            background-color: #1a1a1a; /* Dark F1 track background */
+            color: #f0f0f0; /* Light text for contrast */
             padding: 20px;
+            overflow: hidden; /* Prevent scroll if we add subtle animations */
+        }
+
+        h1 {
+            color: #e60000; /* F1 red */
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-size: 3em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
         }
 
         #game-area {
-            width: 300px;
-            height: 300px;
+            width: 350px; /* Slightly larger */
+            height: 350px;
             margin: 30px auto;
-            background-color: #ff9800; /* Initial color: Orange */
-            border-radius: 15px;
+            background-color: #333; /* Darker grey for waiting */
+            border-radius: 20px; /* Slightly rounded corners */
+            border: 5px solid #e60000; /* Red border */
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            color: white;
-            font-size: 1.2em;
+            color: #f0f0f0;
+            font-size: 1.5em; /* Larger font */
             cursor: pointer;
-            transition: background-color 0.1s;
-            user-select: none; /* Prevents text selection on click */
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: background-color 0.1s ease-out, transform 0.1s ease-out; /* Smooth transitions */
+            user-select: none;
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden; /* For future effects if needed */
         }
+
+        #game-area:active:not(.waiting):not(.too-soon) {
+            transform: scale(0.98); /* Subtle press effect */
+        }
+
+        /* F1 lights simulation */
+        #f1-lights {
+            position: absolute;
+            top: 20px; /* Position above the main game area */
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .light {
+            width: 30px;
+            height: 30px;
+            background-color: #555; /* Off state */
+            border-radius: 50%;
+            border: 2px solid #ccc;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+            transition: background-color 0.2s;
+        }
+
+        .light.on {
+            background-color: #e60000; /* Red light on */
+            box-shadow: 0 0 10px #e60000, inset 0 0 5px #ff6666;
+        }
+
+        .light.green {
+            background-color: #4CAF50; /* Green light for GO */
+            box-shadow: 0 0 15px #4CAF50, inset 0 0 7px #98ff98;
+        }
+
 
         /* Class for the 'wait' state */
         .waiting {
-            background-color: #ff9800 !important; /* Orange */
+            background-color: #333 !important; /* Dark grey */
         }
 
         /* Class for the 'click now' state */
         .clickable {
-            background-color: #4CAF50 !important; /* Green */
+            background-color: #4CAF50 !important; /* F1 Go Green */
+            border-color: #4CAF50 !important;
+        }
+
+        .too-soon {
+            background-color: #e60000 !important; /* F1 Red for false start */
+            border-color: #e60000 !important;
         }
 
         #game-area p {
             padding: 5px;
             margin: 0;
-            line-height: 1.3;
+            line-height: 1.4;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
         }
 
         #result {
-            margin: 20px 0;
-            font-size: 1.1em;
+            margin: 25px 0;
+            font-size: 1.3em;
+            color: #f0f0f0;
         }
 
         #time-display, #best-time {
             font-weight: bold;
-            color: #333;
+            color: #ffd700; /* Gold for important info */
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
         }
 
-        #start-button {
-            padding: 10px 20px;
-            font-size: 1.1em;
+        button {
+            padding: 12px 25px;
+            font-size: 1.2em;
             cursor: pointer;
-            background-color: #007bff;
+            background-color: #e60000; /* F1 Red button */
             color: white;
             border: none;
-            border-radius: 5px;
-            transition: background-color 0.2s;
+            border-radius: 8px;
+            transition: background-color 0.2s, transform 0.1s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            font-family: 'Racing Sans One', Impact, sans-serif;
         }
 
-        #start-button:disabled {
-            background-color: #aaa;
+        button:disabled {
+            background-color: #555;
             cursor: default;
+            box-shadow: none;
         }
 
-        #start-button:hover:not(:disabled) {
-            background-color: #0056b3;
+        button:hover:not(:disabled) {
+            background-color: #ff3333; /* Lighter red on hover */
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
         }
     </style>
 </head>
 <body>
-    <h1>Reaction Time Test</h1>
+    <h1>F1 Reaction Start Test</h1>
+    
+    <div id="f1-lights">
+        <div class="light" id="light-1"></div>
+        <div class="light" id="light-2"></div>
+        <div class="light" id="light-3"></div>
+        <div class="light" id="light-4"></div>
+        <div class="light" id="light-5"></div>
+    </div>
+
     <div id="game-area">
-        <p>Click inside the box as soon as it turns **green**!</p>
-        <p>Your fastest time will be recorded.</p>
+        <p>Ready for Lights Out!</p>
+        <p>Hit **SPACEBAR** as soon as the box turns green!</p>
     </div>
 
     <div id="result">
         <p>Your Reaction Time: <span id="time-display">--</span></p>
-        <p>Best Time: <span id="best-time">--</span></p>
+        <p>Best Lap Time: <span id="best-time">--</span></p>
     </div>
 
-    <button id="start-button">Start Test</button>
+    <button id="start-button">Start Race</button>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -97,31 +174,66 @@
             const timeDisplay = document.getElementById('time-display');
             const bestTimeDisplay = document.getElementById('best-time');
             const startButton = document.getElementById('start-button');
-            const initialText = gameArea.innerHTML;
+            const f1Lights = document.querySelectorAll('.light');
+            const initialGameAreaText = gameArea.innerHTML; // Store initial HTML
 
             let startTime;
             let timeoutId;
             let isWaiting = false;
             let isClickable = false;
+            let currentLight = 0; // To track which F1 light is on
+            
             // Use localStorage to save the best score
-            let bestTime = localStorage.getItem('bestTime') || '--';
+            let bestTime = localStorage.getItem('bestTimeF1') || '--'; // Unique key for F1 version
 
             // Initialize best time display from localStorage
             bestTimeDisplay.textContent = bestTime !== '--' ? `${bestTime} ms` : '--';
 
             /**
-             * Resets the game state and displays a 'Get Ready' message.
+             * Resets the game state and displays a 'Ready' message.
              */
             function resetGame() {
                 clearTimeout(timeoutId);
                 isWaiting = true;
                 isClickable = false;
-                gameArea.innerHTML = "<p>Wait for **green**...</p><p>Don't click yet!</p>";
-                gameArea.classList.remove('clickable');
+                gameArea.innerHTML = "<p>Get Ready!</p><p>Wait for GO...</p>";
+                gameArea.classList.remove('clickable', 'too-soon');
                 gameArea.classList.add('waiting');
                 timeDisplay.textContent = '--';
                 startButton.disabled = true;
-                startButton.textContent = 'Wait...';
+                startButton.textContent = 'Waiting for lights...';
+                resetLights();
+            }
+
+            /**
+             * Lights up the F1 lights one by one, then triggers the 'GO' state.
+             */
+            function lightSequence() {
+                resetGame();
+                currentLight = 0;
+                let lightOnDelay = 700; // Time between lights turning on
+
+                function turnOnLight() {
+                    if (currentLight < f1Lights.length) {
+                        f1Lights[currentLight].classList.add('on');
+                        currentLight++;
+                        timeoutId = setTimeout(turnOnLight, lightOnDelay);
+                    } else {
+                        // All red lights are on, now wait a random time for green
+                        const delayBeforeGo = Math.random() * 1500 + 1000; // 1 to 2.5 seconds after all reds
+                        timeoutId = setTimeout(makeClickable, delayBeforeGo);
+                    }
+                }
+                turnOnLight();
+            }
+
+            /**
+             * Resets all F1 lights to their off state.
+             */
+            function resetLights() {
+                f1Lights.forEach(light => {
+                    light.classList.remove('on', 'green');
+                });
             }
 
             /**
@@ -133,27 +245,16 @@
                 isClickable = true;
                 gameArea.classList.remove('waiting');
                 gameArea.classList.add('clickable');
-                gameArea.innerHTML = "<p>Click **NOW**!</p>";
-                startButton.textContent = 'Test in Progress...';
+                gameArea.innerHTML = "<p>GO! GO! GO!</p>";
+                f1Lights.forEach(light => light.classList.remove('on')); // Turn off red lights
+                f1Lights[0].classList.add('green'); // Just one green light for GO
+                startButton.textContent = 'Race in Progress...';
             }
 
             /**
-             * Starts the test by setting a random delay before turning green.
+             * Handles the user's input (click or spacebar).
              */
-            function startTest() {
-                resetGame();
-
-                // Get a random delay between 1500ms (1.5s) and 4000ms (4s)
-                const delay = Math.random() * 2500 + 1500; 
-
-                // Set a timeout to change the color
-                timeoutId = setTimeout(makeClickable, delay);
-            }
-
-            /**
-             * Handles the user's click on the game area.
-             */
-            function handleGameAreaClick() {
+            function handleUserAction() {
                 if (isClickable) {
                     // Success: Calculate and display reaction time
                     const endTime = new Date().getTime();
@@ -164,40 +265,65 @@
                     if (bestTime === '--' || reactionTime < parseFloat(bestTime)) {
                         bestTime = reactionTime.toString();
                         bestTimeDisplay.textContent = `${bestTime} ms`;
-                        localStorage.setItem('bestTime', bestTime);
+                        localStorage.setItem('bestTimeF1', bestTime); // Save with unique key
                     }
 
                     // Reset for the next round
                     gameArea.classList.remove('clickable');
-                    gameArea.classList.add('waiting');
-                    gameArea.innerHTML = "<p>Time: " + reactionTime + " ms</p><p>Click Start for next round!</p>";
+                    gameArea.innerHTML = "<p>Your Start: " + reactionTime + " ms</p><p>Hit Start Race for next qualifying lap!</p>";
                     isClickable = false;
                     startButton.disabled = false;
-                    startButton.textContent = 'Start Test';
+                    startButton.textContent = 'Start Race';
+                    resetLights(); // Turn off green light
 
                 } else if (isWaiting) {
-                    // Failure: Clicked too early
+                    // Failure: Clicked too early (false start)
                     clearTimeout(timeoutId); // Stop the delayed green change
-                    
+                    resetLights(); // Turn off any red lights that were on
+
                     gameArea.classList.remove('waiting');
-                    gameArea.innerHTML = "<p>Too soon!</p><p>Click Start to try again.</p>";
-                    timeDisplay.textContent = 'Failed';
+                    gameArea.classList.add('too-soon');
+                    gameArea.innerHTML = "<p>False Start!</p><p>Too early! Penalized.</p><p>Click Start Race to try again.</p>";
+                    timeDisplay.textContent = 'Penalized';
                     isWaiting = false;
                     startButton.disabled = false;
-                    startButton.textContent = 'Start Test';
+                    startButton.textContent = 'Start Race';
 
-                    // Briefly show a negative visual cue (like red, though we use orange/green classes)
-                    // We'll just rely on the 'Too soon!' message and the orange color.
+                    // Briefly show red for visual feedback, then revert to default after a short delay
+                    setTimeout(() => {
+                        gameArea.classList.remove('too-soon');
+                        gameArea.innerHTML = initialGameAreaText; // Restore initial text
+                        gameArea.classList.add('waiting'); // Set back to waiting visual state
+                    }, 1500); // Revert after 1.5 seconds
                 }
                 // If not isClickable and not isWaiting, nothing happens (initial state)
             }
 
             // --- Event Listeners ---
-            startButton.addEventListener('click', startTest);
-            gameArea.addEventListener('mousedown', handleGameAreaClick); 
+            startButton.addEventListener('click', lightSequence);
+            gameArea.addEventListener('mousedown', (event) => {
+                // Only trigger if left mouse button is clicked directly on game area
+                if (event.button === 0) { // 0 for left mouse button
+                     handleUserAction();
+                }
+            }); 
             
+            // Listen for spacebar press
+            document.addEventListener('keydown', (event) => {
+                // Prevent default scrolling behavior when spacebar is pressed
+                if (event.code === 'Space' && (isClickable || isWaiting) && !startButton.disabled) {
+                    event.preventDefault(); 
+                    handleUserAction();
+                } else if (event.code === 'Space' && !startButton.disabled && startButton.textContent === 'Start Race') {
+                    // Allow space to also trigger the start button if it's available
+                    event.preventDefault();
+                    lightSequence();
+                }
+            });
+
             // Set initial text on game area
-            gameArea.innerHTML = initialText;
+            gameArea.innerHTML = initialGameAreaText;
+            resetLights(); // Ensure lights are off initially
         });
     </script>
 </body>
