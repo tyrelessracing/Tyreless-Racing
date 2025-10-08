@@ -23,14 +23,40 @@
             font-size: 2.5em;
             color: #ffffff;
             margin-bottom: 20px;
-            font-weight: 300; /* Lighter font weight */
+            font-weight: 300;
         }
+
+        /* --- Traffic Lights Container --- */
+        #traffic-lights {
+            height: 40px; /* Reserve space for lights */
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .light {
+            width: 35px;
+            height: 35px;
+            background-color: #333; /* Off state (dark grey) */
+            border-radius: 50%;
+            border: 2px solid #555;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+            transition: background-color 0.2s, box-shadow 0.2s;
+        }
+
+        .light.on {
+            background-color: #ff3d00; /* Vibrant Red light on */
+            border-color: #ff3d00;
+            box-shadow: 0 0 15px #ff3d00, inset 0 0 8px #ff7755;
+        }
+
 
         /* --- Game Area --- */
         #game-area {
             width: 320px;
             height: 320px;
-            margin: 30px auto;
             background-color: #333333; /* Default waiting/idle state color */
             border-radius: 12px;
             display: flex;
@@ -47,21 +73,18 @@
         }
 
         /* --- State Classes --- */
-        /* State 1: Ready/Waiting (Dark Grey) */
         .waiting {
             background-color: #333333 !important;
         }
 
-        /* State 2: Go/Click Now (Bright Green) */
         .clickable {
-            background-color: #00e676 !important; /* Bright, clean green */
+            background-color: #00e676 !important; /* Bright Green */
             color: #121212;
-            box-shadow: 0 0 20px #00e676; /* Glow effect */
+            box-shadow: 0 0 20px #00e676; 
         }
 
-        /* State 3: Too Soon/False Start (Vibrant Red) */
         .too-soon {
-            background-color: #ff3d00 !important; /* Vibrant red */
+            background-color: #ff3d00 !important; /* Vibrant Red */
             box-shadow: 0 0 20px #ff3d00;
         }
 
@@ -89,7 +112,7 @@
         #time-display, #best-time {
             font-weight: 700;
             font-size: 1.5em;
-            color: #00e676; /* Use green for scores */
+            color: #00e676; /* Green for scores */
             margin-top: 5px;
         }
 
@@ -97,7 +120,7 @@
             padding: 12px 30px;
             font-size: 1.1em;
             cursor: pointer;
-            background-color: #007bff; /* Blue for action */
+            background-color: #007bff;
             color: white;
             border: none;
             border-radius: 6px;
@@ -123,6 +146,12 @@
 <body>
     <h1>Reaction Speed Test</h1>
     
+    <div id="traffic-lights">
+        <div class="light" id="light-1"></div>
+        <div class="light" id="light-2"></div>
+        <div class="light" id="light-3"></div>
+    </div>
+
     <div id="game-area">
         <p>Click or press **SPACEBAR**</p>
         <p>to begin the test.</p>
@@ -147,12 +176,14 @@
             const timeDisplay = document.getElementById('time-display');
             const bestTimeDisplay = document.getElementById('best-time');
             const startButton = document.getElementById('start-button');
+            const trafficLights = document.querySelectorAll('.light');
             const initialGameAreaText = gameArea.innerHTML;
 
             let startTime;
             let timeoutId;
             let isWaiting = false;
             let isClickable = false;
+            let currentLight = 0; // Tracks which red light is on
             
             // Use localStorage to save the best score
             let bestTime = localStorage.getItem('bestTimeMinimal') || '--'; 
@@ -161,7 +192,7 @@
             bestTimeDisplay.textContent = bestTime !== '--' ? `${bestTime} ms` : '--';
 
             /**
-             * Resets the game state and displays a 'Ready' message.
+             * Resets the game state and lights.
              */
             function resetGame() {
                 clearTimeout(timeoutId);
@@ -172,11 +203,43 @@
                 gameArea.classList.add('waiting');
                 timeDisplay.textContent = '--';
                 startButton.disabled = true;
-                startButton.textContent = 'Waiting...';
+                startButton.textContent = 'Waiting for lights...';
+                resetLights();
             }
 
             /**
-             * Changes the box to green, starts the timer, and makes the box clickable.
+             * Resets all traffic lights to their off state.
+             */
+            function resetLights() {
+                trafficLights.forEach(light => {
+                    light.classList.remove('on');
+                });
+            }
+
+            /**
+             * Lights up the traffic lights one by one, then triggers the 'GO' state.
+             */
+            function startLightSequence() {
+                resetGame();
+                currentLight = 0;
+                let lightOnDelay = 700; // Time between lights turning on (0.7s)
+
+                function turnOnLight() {
+                    if (currentLight < trafficLights.length) {
+                        trafficLights[currentLight].classList.add('on');
+                        currentLight++;
+                        timeoutId = setTimeout(turnOnLight, lightOnDelay);
+                    } else {
+                        // All red lights are on, now wait a random time for green (1.0s to 2.5s)
+                        const delayBeforeGo = Math.random() * 1500 + 1000;
+                        timeoutId = setTimeout(makeClickable, delayBeforeGo);
+                    }
+                }
+                turnOnLight();
+            }
+
+            /**
+             * Changes the box to green and starts the timer.
              */
             function makeClickable() {
                 startTime = new Date().getTime();
@@ -185,17 +248,8 @@
                 gameArea.classList.remove('waiting');
                 gameArea.classList.add('clickable');
                 gameArea.innerHTML = "<p>CLICK / SPACEBAR NOW!</p>";
+                resetLights(); // Turn off red lights
                 startButton.textContent = 'Testing...';
-            }
-
-            /**
-             * Starts the test by setting a random delay before turning green.
-             */
-            function startTest() {
-                resetGame();
-                // Random delay between 1.5s and 4.0s
-                const delay = Math.random() * 2500 + 1500; 
-                timeoutId = setTimeout(makeClickable, delay);
             }
 
             /**
@@ -222,11 +276,13 @@
                     isClickable = false;
                     startButton.disabled = false;
                     startButton.textContent = 'Start Test';
+                    resetLights();
 
                 } else if (isWaiting) {
                     // Failure: Clicked too early
                     clearTimeout(timeoutId); 
                     isWaiting = false;
+                    resetLights();
 
                     gameArea.classList.remove('waiting');
                     gameArea.classList.add('too-soon');
@@ -236,7 +292,7 @@
                     startButton.disabled = false;
                     startButton.textContent = 'Start Test';
                     
-                    // Briefly show red, then revert to the starting state text
+                    // Briefly show red, then revert
                     setTimeout(() => {
                         gameArea.classList.remove('too-soon');
                         gameArea.innerHTML = initialGameAreaText;
@@ -247,7 +303,7 @@
             // --- Event Listeners ---
             
             // 1. Start Button Click
-            startButton.addEventListener('click', startTest);
+            startButton.addEventListener('click', startLightSequence);
             
             // 2. Game Area Click
             gameArea.addEventListener('mousedown', (event) => {
@@ -256,7 +312,7 @@
                 }
             }); 
             
-            // 3. Spacebar Press (The main new requirement)
+            // 3. Spacebar Press
             document.addEventListener('keydown', (event) => {
                 if (event.code === 'Space') {
                     // Prevent default scrolling/browser actions
@@ -268,13 +324,14 @@
                     } 
                     // If test is not active AND the button is ready, start the test
                     else if (!startButton.disabled) {
-                        startTest();
+                        startLightSequence();
                     }
                 }
             });
 
             // Set initial text on game area
             gameArea.innerHTML = initialGameAreaText;
+            resetLights();
         });
     </script>
 </body>
