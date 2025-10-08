@@ -9,8 +9,8 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             text-align: center;
-            background-color: #121212; /* Dark background */
-            color: #e0e0e0; /* Light text */
+            background-color: #121212;
+            color: #e0e0e0;
             padding: 40px 20px;
             display: flex;
             flex-direction: column;
@@ -31,15 +31,15 @@
             height: 40px; 
             margin-bottom: 20px;
             display: flex;
-            gap: 10px; /* Reduced gap for 5 lights */
+            gap: 10px;
             justify-content: center;
             align-items: center;
         }
 
         .light {
-            width: 30px; /* Slightly smaller for 5 */
+            width: 30px; 
             height: 30px;
-            background-color: #333; /* Off state (dark grey) */
+            background-color: #333;
             border-radius: 50%;
             border: 2px solid #555;
             box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
@@ -47,7 +47,7 @@
         }
 
         .light.on {
-            background-color: #ff3d00; /* Vibrant Red light on */
+            background-color: #ff3d00;
             border-color: #ff3d00;
             box-shadow: 0 0 15px #ff3d00, inset 0 0 8px #ff7755;
         }
@@ -73,18 +73,15 @@
         }
 
         /* --- State Classes --- */
-        .waiting {
-            background-color: #333333 !important;
-        }
-
+        .waiting { background-color: #333333 !important; }
         .clickable {
-            background-color: #00e676 !important; /* Bright Green */
+            background-color: #00e676 !important;
             color: #121212;
             box-shadow: 0 0 20px #00e676; 
         }
 
         .too-soon {
-            background-color: #ff3d00 !important; /* Vibrant Red */
+            background-color: #ff3d00 !important;
             box-shadow: 0 0 20px #ff3d00;
         }
 
@@ -112,7 +109,7 @@
         #time-display, #best-time {
             font-weight: 700;
             font-size: 1.5em;
-            color: #00e676; /* Green for scores */
+            color: #00e676;
             margin-top: 5px;
         }
 
@@ -129,6 +126,7 @@
             letter-spacing: 1px;
             font-weight: 600;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            margin-bottom: 30px; /* Space before leaderboard */
         }
 
         button:disabled {
@@ -140,6 +138,53 @@
         button:hover:not(:disabled) {
             background-color: #0056b3;
             transform: translateY(-1px);
+        }
+        
+        /* --- Leaderboard Styles --- */
+        #leaderboard-container {
+            width: 100%;
+            max-width: 400px;
+            margin-top: 20px;
+            padding: 15px;
+            background: #1e1e1e;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        #leaderboard-container h2 {
+            font-size: 1.5em;
+            color: #ffd700; /* Gold/Yellow for prominence */
+            margin-bottom: 15px;
+            font-weight: 400;
+        }
+        
+        #leaderboard {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        #leaderboard li {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 10px;
+            border-bottom: 1px solid #333;
+            font-size: 1.1em;
+        }
+        
+        #leaderboard li:last-child {
+            border-bottom: none;
+        }
+        
+        #leaderboard li:nth-child(1) {
+            font-weight: 700;
+            color: #ffd700; /* Gold */
+        }
+        #leaderboard li:nth-child(2) { color: #c0c0c0; /* Silver */ }
+        #leaderboard li:nth-child(3) { color: #cd7f32; /* Bronze */ }
+        
+        .rank-time {
+            font-weight: 600;
         }
     </style>
 </head>
@@ -171,6 +216,12 @@
     </div>
 
     <button id="start-button">Start Test</button>
+    
+    <div id="leaderboard-container">
+        <h2>Top 5 Leaderboard</h2>
+        <ul id="leaderboard">
+            </ul>
+    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -179,6 +230,7 @@
             const bestTimeDisplay = document.getElementById('best-time');
             const startButton = document.getElementById('start-button');
             const trafficLights = document.querySelectorAll('.light');
+            const leaderboardList = document.getElementById('leaderboard');
             const initialGameAreaText = gameArea.innerHTML;
 
             let startTime;
@@ -187,15 +239,48 @@
             let isClickable = false;
             let currentLight = 0; 
             
-            // Use localStorage to save the best score
-            let bestTime = localStorage.getItem('bestTimeMinimal') || '--'; 
+            // Leaderboard and Best Time management
+            const LEADERBOARD_KEY = 'reactionLeaderboard';
+            let leaderboard = JSON.parse(localStorage.getItem(LEADERBOARD_KEY) || '[]');
+            let bestTime = leaderboard.length > 0 ? leaderboard[0].time.toString() : '--'; 
 
-            // Initialize best time display from localStorage
             bestTimeDisplay.textContent = bestTime !== '--' ? `${bestTime} ms` : '--';
 
-            /**
-             * Resets the game state and lights.
-             */
+            /* --- Leaderboard Functions --- */
+            function updateLeaderboardDisplay() {
+                leaderboard.sort((a, b) => a.time - b.time); // Sort by fastest time
+                leaderboard = leaderboard.slice(0, 5); // Keep only top 5
+
+                localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(leaderboard));
+                
+                leaderboardList.innerHTML = ''; // Clear existing list
+
+                if (leaderboard.length === 0) {
+                    leaderboardList.innerHTML = '<li>No scores yet! Be the first.</li>';
+                    bestTimeDisplay.textContent = '--';
+                } else {
+                    leaderboard.forEach((score, index) => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<span>${index + 1}. ${score.name}</span><span class="rank-time">${score.time} ms</span>`;
+                        leaderboardList.appendChild(li);
+                    });
+                    // Update Best Time display from the new rank 1
+                    bestTimeDisplay.textContent = `${leaderboard[0].time} ms`;
+                }
+            }
+            
+            function addScoreToLeaderboard(time) {
+                let name = prompt(`New record time: ${time} ms! Enter your name for the leaderboard:`, "Player");
+                if (!name || name.trim() === "") {
+                    name = "Anonymous";
+                }
+                
+                leaderboard.push({ name: name.substring(0, 15), time: time }); // Limit name length
+                updateLeaderboardDisplay();
+            }
+
+            /* --- Game Logic Functions --- */
+
             function resetGame() {
                 clearTimeout(timeoutId);
                 isWaiting = true;
@@ -209,22 +294,16 @@
                 resetLights();
             }
 
-            /**
-             * Resets all traffic lights to their off state.
-             */
             function resetLights() {
                 trafficLights.forEach(light => {
                     light.classList.remove('on');
                 });
             }
 
-            /**
-             * Lights up the traffic lights one by one, then triggers the 'GO' state.
-             */
             function startLightSequence() {
                 resetGame();
                 currentLight = 0;
-                let lightOnDelay = 700; // Time between lights turning on (0.7s)
+                let lightOnDelay = 700;
 
                 function turnOnLight() {
                     if (currentLight < trafficLights.length) {
@@ -232,8 +311,7 @@
                         currentLight++;
                         timeoutId = setTimeout(turnOnLight, lightOnDelay);
                     } else {
-                        // All red lights are on. 
-                        // Random delay expanded: between 1.5s and 5.5s for increased randomness.
+                        // Random delay between 1.5s and 5.5s
                         const delayBeforeGo = Math.random() * 4000 + 1500; 
                         timeoutId = setTimeout(makeClickable, delayBeforeGo);
                     }
@@ -241,9 +319,6 @@
                 turnOnLight();
             }
 
-            /**
-             * Changes the box to green and starts the timer.
-             */
             function makeClickable() {
                 startTime = new Date().getTime();
                 isWaiting = false;
@@ -251,25 +326,23 @@
                 gameArea.classList.remove('waiting');
                 gameArea.classList.add('clickable');
                 gameArea.innerHTML = "<p>CLICK / SPACEBAR NOW!</p>";
-                resetLights(); // Turn off red lights
+                resetLights();
                 startButton.textContent = 'Testing...';
             }
 
-            /**
-             * Handles the user's input (click or spacebar).
-             */
             function handleUserAction() {
                 if (isClickable) {
                     // Success: Calculate and display reaction time
                     const endTime = new Date().getTime();
                     const reactionTime = endTime - startTime;
                     timeDisplay.textContent = `${reactionTime} ms`;
-
-                    // Update best time
-                    if (bestTime === '--' || reactionTime < parseFloat(bestTime)) {
-                        bestTime = reactionTime.toString();
-                        bestTimeDisplay.textContent = `${bestTime} ms`;
-                        localStorage.setItem('bestTimeMinimal', bestTime); 
+                    
+                    // Check if score qualifies for the leaderboard
+                    const worstScore = leaderboard.length < 5 ? Infinity : leaderboard[4].time;
+                    if (reactionTime < worstScore) {
+                        addScoreToLeaderboard(reactionTime);
+                    } else if (leaderboard.length < 5) {
+                        addScoreToLeaderboard(reactionTime);
                     }
 
                     // Reset for the next round
@@ -282,15 +355,15 @@
                     resetLights();
 
                 } else if (isWaiting) {
-                    // Failure: Clicked too early
+                    // Failure: Clicked too early (DNF)
                     clearTimeout(timeoutId); 
                     isWaiting = false;
                     resetLights();
 
                     gameArea.classList.remove('waiting');
                     gameArea.classList.add('too-soon');
-                    gameArea.innerHTML = "<p>TOO SOON!</p><p>False start.</p>";
-                    timeDisplay.textContent = 'FAIL';
+                    gameArea.innerHTML = "<p>TOO SOON!</p><p>**DNF** (Did Not Finish)</p>";
+                    timeDisplay.textContent = 'DNF';
                     
                     startButton.disabled = false;
                     startButton.textContent = 'Start Test';
@@ -305,34 +378,29 @@
 
             // --- Event Listeners ---
             
-            // 1. Start Button Click
             startButton.addEventListener('click', startLightSequence);
             
-            // 2. Game Area Click
             gameArea.addEventListener('mousedown', (event) => {
-                if (event.button === 0) { // Left mouse button
+                if (event.button === 0) {
                      handleUserAction();
                 }
             }); 
             
-            // 3. Spacebar Press (Works for both action and start)
             document.addEventListener('keydown', (event) => {
                 if (event.code === 'Space') {
-                    // Prevent default scrolling/browser actions
                     event.preventDefault(); 
                     
-                    // If test is active, handle the action
                     if (isClickable || isWaiting) {
                         handleUserAction();
                     } 
-                    // If test is not active AND the button is ready, start the test
                     else if (!startButton.disabled) {
                         startLightSequence();
                     }
                 }
             });
-
-            // Set initial text on game area
+            
+            // --- Initialization ---
+            updateLeaderboardDisplay(); // Load and display the leaderboard on startup
             gameArea.innerHTML = initialGameAreaText;
             resetLights();
         });
