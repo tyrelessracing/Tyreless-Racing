@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minimal Reaction Test</title>
+    <title>Reaction Speed Test</title>
     <style>
         /* --- Global Styles --- */
         body {
@@ -26,19 +26,19 @@
             font-weight: 300;
         }
 
-        /* --- Traffic Lights Container --- */
+        /* --- Traffic Lights Container (5 Lights) --- */
         #traffic-lights {
-            height: 40px; /* Reserve space for lights */
+            height: 40px; 
             margin-bottom: 20px;
             display: flex;
-            gap: 15px;
+            gap: 10px; /* Reduced gap for 5 lights */
             justify-content: center;
             align-items: center;
         }
 
         .light {
-            width: 35px;
-            height: 35px;
+            width: 30px; /* Slightly smaller for 5 */
+            height: 30px;
             background-color: #333; /* Off state (dark grey) */
             border-radius: 50%;
             border: 2px solid #555;
@@ -57,7 +57,7 @@
         #game-area {
             width: 320px;
             height: 320px;
-            background-color: #333333; /* Default waiting/idle state color */
+            background-color: #333333; 
             border-radius: 12px;
             display: flex;
             flex-direction: column;
@@ -150,6 +150,8 @@
         <div class="light" id="light-1"></div>
         <div class="light" id="light-2"></div>
         <div class="light" id="light-3"></div>
+        <div class="light" id="light-4"></div>
+        <div class="light" id="light-5"></div>
     </div>
 
     <div id="game-area">
@@ -183,7 +185,7 @@
             let timeoutId;
             let isWaiting = false;
             let isClickable = false;
-            let currentLight = 0; // Tracks which red light is on
+            let currentLight = 0; 
             
             // Use localStorage to save the best score
             let bestTime = localStorage.getItem('bestTimeMinimal') || '--'; 
@@ -230,8 +232,9 @@
                         currentLight++;
                         timeoutId = setTimeout(turnOnLight, lightOnDelay);
                     } else {
-                        // All red lights are on, now wait a random time for green (1.0s to 2.5s)
-                        const delayBeforeGo = Math.random() * 1500 + 1000;
+                        // All red lights are on. 
+                        // Random delay expanded: between 1.5s and 5.5s for increased randomness.
+                        const delayBeforeGo = Math.random() * 4000 + 1500; 
                         timeoutId = setTimeout(makeClickable, delayBeforeGo);
                     }
                 }
@@ -312,13 +315,13 @@
                 }
             }); 
             
-            // 3. Spacebar Press
+            // 3. Spacebar Press (Works for both action and start)
             document.addEventListener('keydown', (event) => {
                 if (event.code === 'Space') {
                     // Prevent default scrolling/browser actions
                     event.preventDefault(); 
                     
-                    // If test is active (waiting or clickable), handle the reaction/false start
+                    // If test is active, handle the action
                     if (isClickable || isWaiting) {
                         handleUserAction();
                     } 
